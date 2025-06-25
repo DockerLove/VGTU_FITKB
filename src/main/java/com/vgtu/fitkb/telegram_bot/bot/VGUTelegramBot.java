@@ -1,14 +1,11 @@
 package com.vgtu.fitkb.telegram_bot.bot;
 
+import com.vgtu.fitkb.telegram_bot.command.*;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import com.vgtu.fitkb.telegram_bot.config.BotConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import com.vgtu.fitkb.telegram_bot.command.StartCommand;
-import com.vgtu.fitkb.telegram_bot.command.HelpCommand;
-import com.vgtu.fitkb.telegram_bot.command.CathedraCommand;
-import com.vgtu.fitkb.telegram_bot.command.DirectionCommand;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -20,13 +17,20 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     private final CathedraCommand cathedraCommand;
     private final DirectionCommand directionCommand;
 
-    @Autowired // Добавляем @Autowired для конструктора
-    public VGUTelegramBot(BotConfig config, StartCommand startCommand, HelpCommand helpCommand, CathedraCommand cathedraCommand, DirectionCommand directionCommand) {
+    private final DormitoryCommand dormitoryCommand;
+    private final DocsCommand docsCommand;
+
+    @Autowired
+    public VGUTelegramBot(BotConfig config, StartCommand startCommand, HelpCommand helpCommand,
+                          CathedraCommand cathedraCommand, DirectionCommand directionCommand,
+                          DormitoryCommand dormitoryCommand,DocsCommand docsCommand) {
         this.config = config;
         this.startCommand = startCommand;
         this.helpCommand = helpCommand;
         this.cathedraCommand = cathedraCommand;
         this.directionCommand = directionCommand;
+        this.dormitoryCommand = dormitoryCommand;
+        this.docsCommand = docsCommand;
     }
 
     @Override
@@ -55,6 +59,12 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
                         break;
                     case "help":
                         helpCommand.execute(this, chatId);
+                        break;
+                    case "docs":
+                        docsCommand.execute(this,chatId);
+                        break;
+                    case "dormitory":
+                        dormitoryCommand.execute(this,chatId);
                         break;
                     case "cathedra":
                         cathedraCommand.execute(this, chatId, parameter);

@@ -28,15 +28,14 @@ public class DirectionCommand {
             List<Direction> directions = directionService.getAllDirections();
             StringBuilder messageText = new StringBuilder("Список направлений ФИТКБ:\n");
             for (Direction direction : directions) {
-                messageText.append("- ").append(direction.getName()).append(" Информация ").append(direction.getDescription()).append(")\n");
+                messageText.append("- ").append(direction.getName()).append("\n");
             }
             sendMessage(bot, chatId, messageText.toString());
         } else {
             // Если параметр указан, ищем направление по названию
-            Direction direction = directionService.getDirectionByName(directionName);
+            Direction direction = directionService.getDirectionBySecondName(directionName);
             if (direction != null) {
-                String messageText = "Информация о направлении " + direction.getName() + ":\n" +
-                        "Информация: " + direction.getDescription(); // Добавляем информацию о кафедре
+                String messageText = "Информация о направлении " + direction.getName() + ":\n" + direction.getDescription(); // Добавляем информацию о кафедре
                 sendMessage(bot, chatId, messageText);
             } else {
                 sendMessage(bot, chatId, "Направление с названием '" + directionName + "' не найдено.");
