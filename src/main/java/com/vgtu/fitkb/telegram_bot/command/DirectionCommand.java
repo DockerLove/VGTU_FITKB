@@ -22,16 +22,32 @@ public class DirectionCommand {
         this.directionService = directionService;
     }
 
-    public void execute(VGUTelegramBot bot, long chatId) {
-        List<Direction> directions = directionService.getAllDirections();
-        StringBuilder messageText = new StringBuilder("Список направлений ФИТКБ:\n");
-        for (Direction direction : directions) {
-            messageText.append("- ").append(direction.getName()).append(" (Кафедра: ").append(direction.getCathedra()).append(")\n"); // Указываем название и кафедру
+    public void execute(VGUTelegramBot bot, long chatId, String directionName) {
+        if (directionName == null || directionName.isEmpty()) {
+            // Если параметр не указан, выводим список всех направлений
+            List<Direction> directions = directionService.getAllDirections();
+            StringBuilder messageText = new StringBuilder("Список направлений ФИТКБ:\n");
+            for (Direction direction : directions) {
+                messageText.append("- ").append(direction.getName()).append(" Информация ").append(direction.getDescription()).append(")\n");
+            }
+            sendMessage(bot, chatId, messageText.toString());
+        } else {
+            // Если параметр указан, ищем направление по названию
+            Direction direction = directionService.getDirectionByName(directionName);
+            if (direction != null) {
+                String messageText = "Информация о направлении " + direction.getName() + ":\n" +
+                        "Информация: " + direction.getDescription(); // Добавляем информацию о кафедре
+                sendMessage(bot, chatId, messageText);
+            } else {
+                sendMessage(bot, chatId, "Направление с названием '" + directionName + "' не найдено.");
+            }
         }
+    }
 
+    private void sendMessage(VGUTelegramBot bot, long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        message.setText(text);
 
         try {
             bot.execute(message);

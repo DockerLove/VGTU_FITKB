@@ -14,21 +14,35 @@ public class CathedraCommand {
 
     private CathedraService cathedraService = new CathedraService();
 
-    public void execute(VGUTelegramBot bot, long chatId) {
-        List<Cathedra> cathedras = cathedraService.getAllCathedras(); // Получаем список кафедр
-        StringBuilder messageText = new StringBuilder("Список кафедр ФИТКБ:\n");
-        for (Cathedra cathedra : cathedras) {
-            messageText.append("- ").append(cathedra.getName()).append("\n"); // Добавляем название кафедры в сообщение
+    public void execute(VGUTelegramBot bot, long chatId, String cathedraSecondName) {
+        if (cathedraSecondName == null || cathedraSecondName.isEmpty()) {
+            // Если параметр не указан, выводим список всех кафедр
+            List<Cathedra> cathedras = cathedraService.getAllCathedras();
+            StringBuilder messageText = new StringBuilder("Список кафедр ФИТКБ:\n");
+            for (Cathedra cathedra : cathedras) {
+                messageText.append("- ").append(cathedra.getName()).append("\n");
+            }
+            sendMessage(bot, chatId, messageText.toString());
+        } else {
+            // Если параметр указан, ищем кафедру по названию
+            Cathedra cathedra = cathedraService.getCathedraBySecondName(cathedraSecondName);
+            if (cathedra != null) {
+                String messageText = "Информация о кафедре " + cathedra.getName() + ":\n" + cathedra.getDescription();
+                sendMessage(bot, chatId, messageText);
+            } else {
+                sendMessage(bot, chatId, "Кафедра с названием '" + cathedraSecondName + "' не найдена.");
+            }
         }
-
+    }
+    private void sendMessage(VGUTelegramBot bot, long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString()); // Устанавливаем текст сообщения
+        message.setText(text);
 
         try {
-            bot.execute(message); // Отправляем сообщение
+            bot.execute(message);
         } catch (TelegramApiException e) {
-            e.printStackTrace(); // Обрабатываем ошибки при отправке сообщения
+            e.printStackTrace();
         }
     }
 }

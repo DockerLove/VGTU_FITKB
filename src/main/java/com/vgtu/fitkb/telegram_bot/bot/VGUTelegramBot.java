@@ -46,7 +46,9 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
             long chatId = update.getMessage().getChatId();
 
             if (messageText.startsWith("/")) {
-                String command = messageText.substring(1).split(" ")[0];
+                String[] parts = messageText.substring(1).split(" ", 2); // Разделяем команду и параметры
+                String command = parts[0];
+                String parameter = (parts.length > 1) ? parts[1] : null; // Получаем параметр, если он есть
                 switch (command) {
                     case "start":
                         startCommand.execute(this, chatId);
@@ -55,10 +57,10 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
                         helpCommand.execute(this, chatId);
                         break;
                     case "cathedra":
-                        cathedraCommand.execute(this, chatId);
+                        cathedraCommand.execute(this, chatId, parameter);
                         break;
                     case "direction":
-                        directionCommand.execute(this, chatId);
+                        directionCommand.execute(this, chatId, parameter);
                         break;
                     default:
                         sendMessage(chatId, "Неизвестная команда. Используйте /help для просмотра доступных команд..");

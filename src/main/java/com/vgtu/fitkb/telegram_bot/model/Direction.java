@@ -2,7 +2,15 @@ package com.vgtu.fitkb.telegram_bot.model;
 
 public class Direction {
     private String name;
-    private String cathedra;
+    private String description;
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
     public String getName() {
         return name;
@@ -12,11 +20,5 @@ public class Direction {
         this.name = name;
     }
 
-    public String getCathedra() {
-        return cathedra;
-    }
 
-    public void setCathedra(String cathedra) {
-        this.cathedra = cathedra;
-    }
 }
