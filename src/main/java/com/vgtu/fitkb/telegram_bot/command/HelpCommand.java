@@ -17,7 +17,7 @@ public class HelpCommand {
                 "/direction - Получить список направлений ФИТКБ\n" +
                 "/direction X - Получить информацию по направлению. Пример /dirеction 09.03.02 \n" +
                 "/dormitory - Получить информацию об общежитии\n" +
-                "/docs - Получить информацию о подаче заявления в общежитие"; // Добавим описание команды /direction
+                "/docs - Получить файл с информацей о подаче заявления в общежитие"; // Добавим описание команды /direction
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
