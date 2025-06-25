@@ -18,6 +18,7 @@ public class DirectionService {
         // Добавляем направления (заглушка, нужно заменить реальными данными)
         Direction direction1 = new Direction();
         direction1.setName("09.03.01 Информатика и вычислительная техника");
+        direction1.setSecondName("09.03.01");
         direction1.setDescription("Описание направления 09.03.01..."); // Добавьте описание
         directions.add(direction1);
 

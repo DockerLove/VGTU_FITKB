@@ -13,7 +13,9 @@ public class HelpCommand {
                 "/start - Начать общение с ботом\n" +
                 "/help - Показать это сообщение\n" +
                 "/cathedra - Получить список кафедр ФИТКБ\n" +
-                "/direction - Получить список направлений ФИТКБ"; // Добавим описание команды /direction
+                "/cathedra КИТП - Получить информацию по кафедре КИТП" +
+                "/direction - Получить список направлений ФИТКБ" +
+                "/direction 09.03.02 - Получить информацию по направлению 09.03.02"; // Добавим описание команды /direction
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
