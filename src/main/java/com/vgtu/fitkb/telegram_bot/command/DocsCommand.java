@@ -19,10 +19,28 @@ public class DocsCommand {
 
     public DocsCommand(@Value("${documents.pdf.path}") String documentsPdfPath) {
         this.documentsPdfPath = documentsPdfPath;
-
     }
 
     public void execute(TelegramLongPollingBot bot, long chatId) {
+        // 1. Отправляем текст
+        sendDocumentDescription(bot, chatId, "Список документов для подачи заявления на общежитие:");
+
+        // 2. Отправляем PDF-файл
+        sendPdfFile(bot, chatId);
+    }
+
+    private void sendDocumentDescription(TelegramLongPollingBot bot, long chatId, String description) {
+        try {
+            SendMessage message = new SendMessage();
+            message.setChatId(String.valueOf(chatId));
+            message.setText(description);
+            bot.execute(message);
+        } catch (TelegramApiException e) {
+            // Обработка ошибки отправки текстового сообщения
+        }
+    }
+
+    private void sendPdfFile(TelegramLongPollingBot bot, long chatId) {
         File pdfFile = new File(documentsPdfPath);
 
         if (!pdfFile.exists() || !pdfFile.isFile()) {
@@ -35,17 +53,19 @@ public class DocsCommand {
             SendDocument document = new SendDocument(String.valueOf(chatId), inputFile);
             bot.execute(document);
         } catch (TelegramApiException e) {
-
             sendErrorMessage(bot, chatId, "Failed to send PDF file");
         }
     }
 
+
     private void sendErrorMessage(TelegramLongPollingBot bot, long chatId, String errorMessage) {
         try {
-            SendMessage message = new SendMessage(String.valueOf(chatId), errorMessage);
+            SendMessage message = new SendMessage();
+            message.setChatId(String.valueOf(chatId));
+            message.setText(errorMessage);
             bot.execute(message);
         } catch (TelegramApiException e) {
-
+            // Логировать ошибку
         }
     }
 }

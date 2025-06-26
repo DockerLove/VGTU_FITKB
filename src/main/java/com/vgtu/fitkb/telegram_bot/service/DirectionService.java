@@ -192,9 +192,9 @@ public class DirectionService {
         return directions;
     }
 
-    public Direction getDirectionBySecondName(String secondName) {
+    public Direction getDirectionBySecondName(String name) {
         for (Direction direction : directions) {
-            if (direction.getSecondName().equalsIgnoreCase(secondName)) { // Игнорируем регистр
+            if (direction.getName().equalsIgnoreCase(name)) { // Игнорируем регистр
                 return direction;
             }
         }
