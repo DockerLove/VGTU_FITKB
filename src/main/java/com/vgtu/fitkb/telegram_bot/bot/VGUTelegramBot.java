@@ -44,7 +44,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     private static final Map<String, String> commandMap = new HashMap<>();
 
     static {
-        commandMap.put("Помощь", HELP_COMMAND);
+        commandMap.put("Список команд", HELP_COMMAND);
         commandMap.put("Документы", DOCS_COMMAND);
         commandMap.put("Общежитие", DORMITORY_COMMAND);
         commandMap.put("Кафедры", CATHEDRA_COMMAND);
@@ -151,7 +151,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("Помощь")); // Заменили /help на "Помощь"
+        row1.add(new KeyboardButton("Список команд")); // Заменили /help на "Помощь"
         row1.add(new KeyboardButton("Документы")); // Заменили /docs на "Документы"
         KeyboardRow row2 = new KeyboardRow();
         row2.add(new KeyboardButton("Кафедры")); // Заменили /cathedra на "Кафедры"
