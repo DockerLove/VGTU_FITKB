@@ -124,7 +124,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
                             userShowMainKeyboard.put(chatId, true);
                             sendMainMenu(chatId);
                             break;
-                        case "/submit":
+                        case SUBMIT_DOCUMENTS:
                             usersInPoll.put(chatId, true); // Устанавливаем флаг опроса
                             documentRequestCommand.startPoll(this, chatId);
                             break;

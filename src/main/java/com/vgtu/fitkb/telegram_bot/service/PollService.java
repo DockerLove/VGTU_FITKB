@@ -55,6 +55,14 @@ public class PollService {
             sendMessage(bot,chatId, "Опрос не начат. Введите /submit для начала.");
             return;
         }
+        // Обработка команд управления
+        if (answer.equalsIgnoreCase("Отмена")) {
+            cancelPoll(bot, chatId, state);
+            return;
+        } else if (answer.equalsIgnoreCase("Назад")) {
+            handleBackCommand(bot, chatId, state);
+            return;
+        }
         if (state.questionNumber == 0) {
             // Обработка ФИО
             String[] parts = answer.split(" ");
@@ -142,9 +150,26 @@ public class PollService {
         message.setChatId(chatId.toString());
         message.setText(question);
 
-        if (state.questionNumber > 1) {
-            message.setReplyMarkup(createYesNoKeyboard());
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+        // Добавляем кнопки для ответа
+        if (state.questionNumber > 1) { // Для вопросов Да/Нет
+            KeyboardRow answerRow = new KeyboardRow();
+            answerRow.add("Нет");
+            answerRow.add("Да");
+            keyboardRows.add(answerRow);
         }
+
+        // Добавляем кнопки управления
+        KeyboardRow controlRow = new KeyboardRow();
+        controlRow.add("Отмена");
+        controlRow.add("Назад");
+        keyboardRows.add(controlRow);
+
+        keyboardMarkup.setKeyboard(keyboardRows);
+        keyboardMarkup.setResizeKeyboard(true);
+        message.setReplyMarkup(keyboardMarkup);
 
         try {
             bot.execute(message);
@@ -152,7 +177,6 @@ public class PollService {
             e.printStackTrace();
         }
     }
-
     private ReplyKeyboardMarkup createYesNoKeyboard() {
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboardRows = new ArrayList<>();
@@ -184,5 +208,32 @@ public class PollService {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    private void handleBackCommand(VGUTelegramBot bot, Long chatId, UserPollState state) {
+        if (state.questionNumber > 0) {
+            state.questionNumber--;
+
+            // Специальная обработка для возврата с вопроса Да/Нет
+            if (state.questionNumber > 1) {
+                // Откатываем начисленные баллы
+                switch (state.questionNumber + 1) { // +1 потому что мы уже уменьшили questionNumber
+                    case 2: state.user.setPoints(state.user.getPoints() - 5); break;
+                    case 3: state.user.setPoints(state.user.getPoints() - 4); break;
+                    case 4: state.user.setPoints(state.user.getPoints() - 3); break;
+                    case 5: state.user.setPoints(state.user.getPoints() - 2); break;
+                    case 6: state.user.setPoints(state.user.getPoints() - 1); break;
+                }
+            }
+
+            askQuestion(bot, chatId, state);
+        } else {
+            sendMessage(bot, chatId, "Вы в начале опроса, нельзя вернуться назад.");
+        }
+    }
+    private void cancelPoll(VGUTelegramBot bot, Long chatId, UserPollState state) {
+        userStates.remove(chatId);
+        sendMessage(bot, chatId, "Опрос отменён. Все введённые данные удалены.");
+        bot.finishPoll(chatId);
     }
 }
