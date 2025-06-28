@@ -72,9 +72,22 @@ public class PollService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
             try {
                 LocalDate birthday = LocalDate.parse(answer, formatter);
+                LocalDate now = LocalDate.now();
+                LocalDate minDate = LocalDate.of(1900, 1, 1);
+
+                if (birthday.isAfter(now)) {
+                    sendMessage(bot, chatId, "Дата рождения не может быть в будущем. Введите корректную дату.");
+                    return;
+                }
+
+                if (birthday.isBefore(minDate)) {
+                    sendMessage(bot, chatId, "Дата рождения не может быть раньше 1900 года. Введите корректную дату.");
+                    return;
+                }
+
                 state.user.setBirthday(birthday);
                 state.questionNumber++;
-                askQuestion(bot, chatId,state);
+                askQuestion(bot, chatId, state);
             } catch (DateTimeParseException e) {
                 sendMessage(bot, chatId, "Пожалуйста, введите дату рождения в формате ДД.ММ.ГГГГ.");
             }
