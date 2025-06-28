@@ -4,7 +4,6 @@ import com.vgtu.fitkb.telegram_bot.command.*;
 import com.vgtu.fitkb.telegram_bot.model.Cathedra;
 import com.vgtu.fitkb.telegram_bot.model.Direction;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import com.vgtu.fitkb.telegram_bot.config.BotConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,16 +26,17 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     private final HelpCommand helpCommand;
     private final CathedraCommand cathedraCommand;
     private final DirectionCommand directionCommand;
-
+    private final DocumentRequestCommand documentRequestCommand;
     private final DormitoryCommand dormitoryCommand;
     private final DocsCommand docsCommand;
+    private final Map<Long, Boolean> usersInPoll = new HashMap<>();
 
     private static final String HELP_COMMAND = "/help";
     private static final String DOCS_COMMAND = "/docs";
     private static final String DORMITORY_COMMAND = "/dormitory";
     private static final String CATHEDRA_COMMAND = "/cathedra";
     private static final String DIRECTION_COMMAND = "/direction";
-
+    private static final String SUBMIT_DOCUMENTS = "/submit";
     private final Map<Long, Boolean> userShowMainKeyboard = new HashMap<>();
 
     private boolean showMainKeyboard = true;
@@ -50,11 +50,12 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         commandMap.put("Кафедры", CATHEDRA_COMMAND);
         commandMap.put("Направления", DIRECTION_COMMAND);
         commandMap.put("Назад", "/back");
+        commandMap.put("Подать документы", SUBMIT_DOCUMENTS);
     }
     @Autowired
     public VGUTelegramBot(BotConfig config, StartCommand startCommand, HelpCommand helpCommand,
                           CathedraCommand cathedraCommand, DirectionCommand directionCommand,
-                          DormitoryCommand dormitoryCommand,DocsCommand docsCommand) {
+                          DormitoryCommand dormitoryCommand,DocsCommand docsCommand, DocumentRequestCommand documentRequestCommand) {
         this.config = config;
         this.startCommand = startCommand;
         this.helpCommand = helpCommand;
@@ -62,7 +63,9 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         this.directionCommand = directionCommand;
         this.dormitoryCommand = dormitoryCommand;
         this.docsCommand = docsCommand;
+        this.documentRequestCommand = documentRequestCommand;
     }
+
 
     @Override
     public String getBotUsername() {
@@ -79,7 +82,11 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
-
+            if (usersInPoll.getOrDefault(chatId, false)) {
+                // Если да - передаем ответ в PollService
+                documentRequestCommand.processPollAnswer(this, chatId, messageText);
+                return;
+            }
             Boolean showMainKeyboard = userShowMainKeyboard.getOrDefault(chatId, true);
 
             if (messageText.equals("/start")) {
@@ -116,6 +123,10 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
                         case "/back":  // Обработка "Назад"
                             userShowMainKeyboard.put(chatId, true);
                             sendMainMenu(chatId);
+                            break;
+                        case "/submit":
+                            usersInPoll.put(chatId, true); // Устанавливаем флаг опроса
+                            documentRequestCommand.startPoll(this, chatId);
                             break;
                         default:
                             sendMessage(chatId, "Неизвестная команда. Используйте /help для просмотра доступных команд.");
@@ -157,7 +168,8 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         row2.add(new KeyboardButton("Кафедры")); // Заменили /cathedra на "Кафедры"
         row2.add(new KeyboardButton("Направления"));
         KeyboardRow row3 = new KeyboardRow();
-        row3.add(new KeyboardButton("Общежитие")); // Заменили /dormitory на "Общежитие"
+        row3.add(new KeyboardButton("Общежитие"));
+        row3.add(new KeyboardButton("Подать документы"));// Заменили /dormitory на "Общежитие"
 
         keyboardRows.add(row1);
         keyboardRows.add(row2);
@@ -182,5 +194,9 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+    public void finishPoll(long chatId) {
+        usersInPoll.remove(chatId); // Четко сбрасываем флаг
+        sendMainMenu(chatId); // Возвращаем главное меню
     }
 }
