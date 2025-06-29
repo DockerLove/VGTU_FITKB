@@ -375,4 +375,8 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         usersInPoll.remove(chatId);
         startFileUpload(chatId); // Переходим к загрузке файлов после опроса
     }
+    public void cancelPoll(long chatId){
+        usersInPoll.remove(chatId);
+        sendMainMenu(chatId);
+    }
 }

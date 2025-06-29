@@ -234,6 +234,6 @@ public class PollService {
     private void cancelPoll(VGUTelegramBot bot, Long chatId, UserPollState state) {
         userStates.remove(chatId);
         sendMessage(bot, chatId, "Опрос отменён. Все введённые данные удалены.");
-        bot.finishPoll(chatId);
+        bot.cancelPoll(chatId);
     }
 }

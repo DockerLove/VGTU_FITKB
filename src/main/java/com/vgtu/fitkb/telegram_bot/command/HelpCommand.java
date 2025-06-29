@@ -16,7 +16,8 @@ public class HelpCommand {
                 "/direction - Получить список и информацию по каждому направлению ФИТКБ\n" +
                 "/dormitory - Получить информацию об общежитии\n" +
                 "/docs - Получить файл с информацей о подаче заявления в общежитие\n" +
-                "/submit - Подать заявление на общежитие"; // Добавим описание команды /direction
+                "/submit - Подать заявление на общежитие\n" +
+                "/rating - Узнать на каком вы месте в рейтинге на зачисление в общежитие"; // Добавим описание команды /direction
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
