@@ -13,4 +13,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByPointsGreaterThanEqual(Integer minPoints);
 
     Optional<User> findByChatId(Long chatId);
+    void deleteByChatId(Long chatId);
 }

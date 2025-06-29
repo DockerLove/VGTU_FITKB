@@ -34,7 +34,7 @@ public class PollService {
     }
 
     private final List<String> questions = List.of(
-            "Ваше имя, фамилия, отчество?",
+            "Ваше фамилия, имя, отчество?",
             "Ваша дата рождения (в формате ДД.ММ.ГГГГ)?",
             "Вы являетесь ребенком-сиротой или остались без попечения родителей? (Да/Нет)",
             "Вам установлена I или II группа инвалидности, либо вы являетесь ребенком-инвалидом? (Да/Нет)",
@@ -156,8 +156,8 @@ public class PollService {
         // Добавляем кнопки для ответа
         if (state.questionNumber > 1) { // Для вопросов Да/Нет
             KeyboardRow answerRow = new KeyboardRow();
-            answerRow.add("Нет");
             answerRow.add("Да");
+            answerRow.add("Нет");
             keyboardRows.add(answerRow);
         }
 

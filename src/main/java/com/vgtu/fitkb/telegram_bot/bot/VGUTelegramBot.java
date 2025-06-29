@@ -5,6 +5,7 @@ import com.vgtu.fitkb.telegram_bot.model.Cathedra;
 import com.vgtu.fitkb.telegram_bot.model.Direction;
 import com.vgtu.fitkb.telegram_bot.model.User;
 import com.vgtu.fitkb.telegram_bot.service.SubmitService;
+import com.vgtu.fitkb.telegram_bot.service.UserService;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Document;
@@ -36,6 +37,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     private final DormitoryCommand dormitoryCommand;
     private final DocsCommand docsCommand;
     private final SubmitService submitService;
+    private final UserService userService;
     private final Map<Long, Boolean> usersInPoll = new HashMap<>();
     private final Map<Long, Boolean> usersUploadingFiles = new ConcurrentHashMap<>();
 
@@ -63,8 +65,8 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     @Autowired
     public VGUTelegramBot(BotConfig config, StartCommand startCommand, HelpCommand helpCommand,
                           CathedraCommand cathedraCommand, DirectionCommand directionCommand,
-                          DormitoryCommand dormitoryCommand,DocsCommand docsCommand, DocumentRequestCommand documentRequestCommand,
-                          SubmitService submitService) {
+                          DormitoryCommand dormitoryCommand, DocsCommand docsCommand, DocumentRequestCommand documentRequestCommand,
+                          SubmitService submitService, UserService userService) {
         this.config = config;
         this.startCommand = startCommand;
         this.helpCommand = helpCommand;
@@ -74,6 +76,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         this.docsCommand = docsCommand;
         this.documentRequestCommand = documentRequestCommand;
         this.submitService = submitService;
+        this.userService = userService;
     }
 
 
@@ -219,9 +222,11 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
             case "Готово":
                 usersUploadingFiles.remove(chatId);
                 documentRequestCommand.completeSubmission(this,chatId);
+                sendMainMenu(chatId);
                 break;
 
             case "Отмена":
+                userService.deleteUserByChatId(chatId);
                 usersUploadingFiles.remove(chatId);
                 documentRequestCommand.cancelSubmission(this,chatId);
                 sendMainMenu(chatId);
@@ -231,6 +236,8 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
                 sendFileUploadKeyboard(chatId, "Отправляйте документы или используйте кнопки:");
         }
     }
+
+
 
     private void handleRegularCommands(long chatId, String text) {
         if (text.equals("/start")) {
