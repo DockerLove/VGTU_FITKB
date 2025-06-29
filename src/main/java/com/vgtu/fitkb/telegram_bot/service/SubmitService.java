@@ -12,52 +12,21 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SubmitService {
+    private final UserService userService;
     private final GoogleDriveService driveService;
     private final Map<Long, List<String>> userFiles = new ConcurrentHashMap<>();
 
     @Autowired
-    public SubmitService(GoogleDriveService driveService) {
+    public SubmitService(GoogleDriveService driveService,UserService userService) {
         this.driveService = driveService;
+        this.userService = userService;
     }
 
-    public void requestDocuments(VGUTelegramBot bot,Long chatId, User userData) {
-        // Сохраняем данные пользователя временно
-        userFiles.put(chatId, new ArrayList<>());
-
-        // Отправляем инструкцию
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId.toString());
-        message.setText("""
-            📎 Пожалуйста, загрузите необходимые документы:
-            - Паспорт (первая страница и прописка)
-            - Аттестат/диплом
-            - Фото 3x4
-            - Другие подтверждающие документы
-            
-            Отправляйте файлы по одному. Когда закончите, нажмите "Готово".
-            """);
-
-        // Создаем клавиатуру с кнопкой "Готово"
-        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
-        keyboard.setResizeKeyboard(true);
-        List<KeyboardRow> rows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
-        row.add("Готово");
-        row.add("Отмена");
-        rows.add(row);
-        keyboard.setKeyboard(rows);
-        message.setReplyMarkup(keyboard);
-
-        try {
-            bot.execute(message);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
 
     public void processFile(VGUTelegramBot bot, Long chatId, String fileId, String fileName) {
         List<String> files = userFiles.getOrDefault(chatId, new ArrayList<>());
@@ -80,7 +49,8 @@ public class SubmitService {
 
         try {
             sendMessage(bot,chatId,"Пожалуйста подождите, документы отправляются.");
-            String folderId = driveService.createFolder(chatId.toString());
+            Optional<User> user = userService.findByChatId(chatId);
+            String folderId = driveService.createFolder(user.get().getSecondName() + " " + user.get().getFirstName()+ " " + user.get().getLastName() + " "+ chatId.toString());
             for (String file : files) {
                 String[] parts = file.split(":");
                 driveService.uploadTelegramFile(bot, parts[1], parts[0], folderId);

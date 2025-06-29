@@ -2,6 +2,7 @@ package com.vgtu.fitkb.telegram_bot.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -28,6 +29,9 @@ public class User {
 
     @Column(name = "points")
     private int points;
+
+    @Column(name = "registration_date", nullable = false, updatable = false)
+    private LocalDateTime registrationDate = LocalDateTime.now();
 
     public User() {
         this.points = 0;

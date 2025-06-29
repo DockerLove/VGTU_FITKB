@@ -47,6 +47,8 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     private static final String CATHEDRA_COMMAND = "/cathedra";
     private static final String DIRECTION_COMMAND = "/direction";
     private static final String SUBMIT_DOCUMENTS = "/submit";
+    private static final String RATING_COMMAND = "/rating";
+
     private final Map<Long, Boolean> userShowMainKeyboard = new HashMap<>();
 
     private boolean showMainKeyboard = true;
@@ -61,6 +63,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         commandMap.put("Направления", DIRECTION_COMMAND);
         commandMap.put("Назад", "/back");
         commandMap.put("Подать документы", SUBMIT_DOCUMENTS);
+        commandMap.put("Рейтинг", RATING_COMMAND);
     }
     @Autowired
     public VGUTelegramBot(BotConfig config, StartCommand startCommand, HelpCommand helpCommand,
@@ -138,6 +141,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     private void handleMainMenuCommands(long chatId, String text) {
         String command = commandMap.getOrDefault(text, text);
         switch (command) {
+            case RATING_COMMAND -> userService.showRating(this,chatId);
             case HELP_COMMAND -> helpCommand.execute(this, chatId);
             case DOCS_COMMAND -> docsCommand.execute(this, chatId);
             case DORMITORY_COMMAND -> dormitoryCommand.execute(this, chatId);
@@ -321,6 +325,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         rows.add(createKeyboardRow("Список команд", "Документы"));
         rows.add(createKeyboardRow("Кафедры", "Направления"));
         rows.add(createKeyboardRow("Общежитие", "Подать документы"));
+        rows.add(createKeyboardRow("Рейтинг"));
 
         keyboard.setKeyboard(rows);
         message.setReplyMarkup(keyboard);
@@ -363,7 +368,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
 
     public void startFileUpload(long chatId) {
         usersUploadingFiles.put(chatId, true);
-        sendFileUploadKeyboard(chatId, "📎 Отправляйте документы по одному. Когда закончите, нажмите «Готово»");
+        sendFileUploadKeyboard(chatId, "📎 Отправляйте документы по одному и НЕ в сжатом виде, если это JPG или PNG. Когда закончите, нажмите «Готово»");
     }
 
     public void finishPoll(long chatId) {
