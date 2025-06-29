@@ -218,25 +218,36 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     }
 
     private void handleFileUploadCommands(long chatId, String command) {
+        // Проверяем, находится ли пользователь в режиме загрузки
+        if (!usersUploadingFiles.getOrDefault(chatId, false)) {
+            sendMainMenu(chatId);
+            return;
+        }
+
         switch (command) {
             case "Готово":
-                usersUploadingFiles.remove(chatId);
-                documentRequestCommand.completeSubmission(this,chatId);
-                sendMainMenu(chatId);
+                boolean success = documentRequestCommand.completeSubmission(this, chatId);
+                if (success) {
+                    usersUploadingFiles.put(chatId, false); // Выходим из режима загрузки
+                    sendMainMenu(chatId);
+                } else {
+                    // Остаемся в режиме загрузки, но просим отправить файлы
+                    sendFileUploadKeyboard(chatId,
+                            "Вы не отправили ни одного файла. Пожалуйста, отправьте документы или нажмите «Отмена»");
+                }
                 break;
 
             case "Отмена":
                 userService.deleteUserByChatId(chatId);
-                usersUploadingFiles.remove(chatId);
-                documentRequestCommand.cancelSubmission(this,chatId);
+                usersUploadingFiles.put(chatId, false);
+                documentRequestCommand.cancelSubmission(this, chatId);
                 sendMainMenu(chatId);
                 break;
 
             default:
-                sendFileUploadKeyboard(chatId, "Отправляйте документы или используйте кнопки:");
+                sendFileUploadKeyboard(chatId, "Отправьте документ или используйте кнопки:");
         }
     }
-
 
 
     private void handleRegularCommands(long chatId, String text) {

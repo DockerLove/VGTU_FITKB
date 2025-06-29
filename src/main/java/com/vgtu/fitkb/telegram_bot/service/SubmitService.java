@@ -59,41 +59,39 @@ public class SubmitService {
         }
     }
 
-    public void processFile(VGUTelegramBot bot,Long chatId, String fileId, String fileName) {
+    public void processFile(VGUTelegramBot bot, Long chatId, String fileId, String fileName) {
         List<String> files = userFiles.getOrDefault(chatId, new ArrayList<>());
-        files.add(fileName + ":" + fileId); // Сохраняем имя и ID файла
-        userFiles.put(chatId, files);
 
-        sendMessage(bot,chatId, "Файл " + fileName + " получен. Отправьте следующий или нажмите 'Готово'.");
+        // Проверяем, не был ли файл уже добавлен
+        boolean fileAlreadyExists = files.stream()
+                .anyMatch(f -> f.split(":")[1].equals(fileId));
+
+        if (!fileAlreadyExists) {
+            files.add(fileName + ":" + fileId);
+            userFiles.put(chatId, files);
+        }
     }
 
-    public void completeSubmission(VGUTelegramBot bot,Long chatId) {
+    public boolean completeSubmission(VGUTelegramBot bot, Long chatId) {
         List<String> files = userFiles.get(chatId);
         if (files == null || files.isEmpty()) {
-            sendMessage(bot,chatId, "Вы не отправили ни одного файла. Попробуйте снова.");
-            return;
+            return false; // Не удаляем usersUploadingFiles здесь!
         }
 
         try {
-            // 1. Создаем папку для пользователя в Google Drive
+            sendMessage(bot,chatId,"Пожалуйста подождите, документы отправляются.");
             String folderId = driveService.createFolder(chatId.toString());
-
-            // 2. Загружаем все файлы
             for (String file : files) {
                 String[] parts = file.split(":");
-                String fileName = parts[0];
-                String fileId = parts[1];
-                driveService.uploadTelegramFile(bot,fileId, fileName, folderId);
+                driveService.uploadTelegramFile(bot, parts[1], parts[0], folderId);
             }
-
-            // 3. Отправляем подтверждение
-            sendMessage(bot,chatId, "✅ Все документы успешно загружены в облако!");
-
+            sendMessage(bot, chatId, "✅ Документы успешно загружены!");
+            return true;
         } catch (Exception e) {
-            sendMessage(bot,chatId, "❌ Ошибка при загрузке документов: " + e.getMessage());
-            e.printStackTrace();
+            sendMessage(bot, chatId, "❌ Ошибка: " + e.getMessage());
+            return false;
         } finally {
-            userFiles.remove(chatId); // Очищаем временные данные
+            userFiles.remove(chatId);
         }
     }
 

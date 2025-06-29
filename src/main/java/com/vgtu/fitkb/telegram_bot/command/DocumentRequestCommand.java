@@ -55,16 +55,13 @@ public class DocumentRequestCommand {
 
         // Сохраняем файл во временное хранилище
         submitService.processFile(bot,chatId, doc.getFileId(), doc.getFileName());
-
-        // Отправляем подтверждение
-        sendMessage(bot,chatId, "Файл " + doc.getFileName() + " получен. Отправьте следующий или нажмите 'Готово'.");
     }
 
     /**
      * Завершает процесс подачи документов
      */
-    public void completeSubmission(VGUTelegramBot bot,long chatId) {
-        submitService.completeSubmission(bot, chatId);
+    public boolean completeSubmission(VGUTelegramBot bot,long chatId) {
+        return submitService.completeSubmission(bot, chatId);
     }
 
     /**
