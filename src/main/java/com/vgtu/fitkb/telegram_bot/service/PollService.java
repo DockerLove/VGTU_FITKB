@@ -67,13 +67,13 @@ public class PollService {
             // Обработка ФИО
             String[] parts = answer.split(" ");
             if (parts.length == 3) {
-                state.user.setFirstName(parts[0]);
-                state.user.setSecondName(parts[1]);
+                state.user.setFirstName(parts[1]);
+                state.user.setSecondName(parts[0]);
                 state.user.setLastName(parts[2]);
                 state.questionNumber++;
                 askQuestion(bot, chatId,state);
             } else {
-                sendMessage(bot, chatId, "Пожалуйста, введите ФИО полностью (Имя Фамилия Отчество).");
+                sendMessage(bot, chatId, "Пожалуйста, введите ФИО полностью (Фамилия Имя Отчество).");
             }
         } else if (state.questionNumber == 1) {
             // Обработка даты рождения

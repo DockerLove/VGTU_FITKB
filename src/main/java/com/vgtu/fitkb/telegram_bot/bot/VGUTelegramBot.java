@@ -3,7 +3,12 @@ package com.vgtu.fitkb.telegram_bot.bot;
 import com.vgtu.fitkb.telegram_bot.command.*;
 import com.vgtu.fitkb.telegram_bot.model.Cathedra;
 import com.vgtu.fitkb.telegram_bot.model.Direction;
+import com.vgtu.fitkb.telegram_bot.model.User;
+import com.vgtu.fitkb.telegram_bot.service.SubmitService;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.objects.Chat;
+import org.telegram.telegrambots.meta.api.objects.Document;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import com.vgtu.fitkb.telegram_bot.config.BotConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class VGUTelegramBot extends TelegramLongPollingBot {
@@ -29,7 +35,9 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     private final DocumentRequestCommand documentRequestCommand;
     private final DormitoryCommand dormitoryCommand;
     private final DocsCommand docsCommand;
+    private final SubmitService submitService;
     private final Map<Long, Boolean> usersInPoll = new HashMap<>();
+    private final Map<Long, Boolean> usersUploadingFiles = new ConcurrentHashMap<>();
 
     private static final String HELP_COMMAND = "/help";
     private static final String DOCS_COMMAND = "/docs";
@@ -55,7 +63,8 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     @Autowired
     public VGUTelegramBot(BotConfig config, StartCommand startCommand, HelpCommand helpCommand,
                           CathedraCommand cathedraCommand, DirectionCommand directionCommand,
-                          DormitoryCommand dormitoryCommand,DocsCommand docsCommand, DocumentRequestCommand documentRequestCommand) {
+                          DormitoryCommand dormitoryCommand,DocsCommand docsCommand, DocumentRequestCommand documentRequestCommand,
+                          SubmitService submitService) {
         this.config = config;
         this.startCommand = startCommand;
         this.helpCommand = helpCommand;
@@ -64,6 +73,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         this.dormitoryCommand = dormitoryCommand;
         this.docsCommand = docsCommand;
         this.documentRequestCommand = documentRequestCommand;
+        this.submitService = submitService;
     }
 
 
@@ -79,124 +89,267 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
-            long chatId = update.getMessage().getChatId();
-            if (usersInPoll.getOrDefault(chatId, false)) {
-                // Если да - передаем ответ в PollService
-                documentRequestCommand.processPollAnswer(this, chatId, messageText);
+        if (!update.hasMessage()) return;
+
+        Message message = update.getMessage();
+        long chatId = message.getChatId();
+
+        // 1. Обработка документов (вынесено в начало как приоритетное действие)
+        if (message.hasDocument()) {
+            handleDocumentUpload(chatId, message.getDocument());
+            return;
+        }
+
+        // 2. Обработка текстовых сообщений
+        if (message.hasText()) {
+            String text = message.getText();
+
+            // Приоритетная обработка состояний
+            if (usersUploadingFiles.getOrDefault(chatId, false)) {
+                handleFileUploadCommands(chatId, text);
                 return;
             }
-            Boolean showMainKeyboard = userShowMainKeyboard.getOrDefault(chatId, true);
 
-            if (messageText.equals("/start")) {
+            if (usersInPoll.getOrDefault(chatId, false)) {
+                documentRequestCommand.processPollAnswer(this, chatId, text);
+                return;
+            }
+
+            // Обработка команды /start
+            if (text.equals("/start")) {
                 startCommand.execute(this, chatId);
                 userShowMainKeyboard.put(chatId, true);
                 sendMainMenu(chatId);
-            } else if (showMainKeyboard) {
-                // Получаем английскую команду из русского названия
-                String command = commandMap.get(messageText);
-                if (command == null) {
-                    // Если команда не найдена в commandMap, то, возможно, это прямая английская команда
-                    command = messageText; // Используем messageText как команду
-                }
-                // Обработка команд с основной клавиатуры
-                if (command != null) {
-                    switch (command) {
-                        case HELP_COMMAND:
-                            helpCommand.execute(this, chatId);
-                            break;
-                        case DOCS_COMMAND:
-                            docsCommand.execute(this, chatId);
-                            break;
-                        case DORMITORY_COMMAND:
-                            dormitoryCommand.execute(this, chatId);
-                            break;
-                        case CATHEDRA_COMMAND:
-                            cathedraCommand.showCathedraList(this, chatId); // Вызываем метод показа списка кафедр
-                            userShowMainKeyboard.put(chatId, false); // Скрываем основную клавиатуру
-                            break;
-                        case DIRECTION_COMMAND:
-                            directionCommand.showDirectionList(this, chatId); // Вызываем метод показа списка направлений
-                            userShowMainKeyboard.put(chatId, false); // Скрываем основную клавиатуру
-                            break;
-                        case "/back":  // Обработка "Назад"
-                            userShowMainKeyboard.put(chatId, true);
-                            sendMainMenu(chatId);
-                            break;
-                        case SUBMIT_DOCUMENTS:
-                            usersInPoll.put(chatId, true); // Устанавливаем флаг опроса
-                            documentRequestCommand.startPoll(this, chatId);
-                            break;
-                        default:
-                            sendMessage(chatId, "Неизвестная команда. Используйте /help для просмотра доступных команд.");
-                    }
-                }
+                return;
+            }
+
+            // Обработка остальных команд
+            if (userShowMainKeyboard.getOrDefault(chatId, true)) {
+                handleMainMenuCommands(chatId, text);
             } else {
-                // Обработка команд, когда основная клавиатура скрыта (например, "Назад")
-                if (messageText.equals("Назад")) {
-                    userShowMainKeyboard.put(chatId, true);
-                    sendMainMenu(chatId); // Отображаем основное меню
-                } else {
-                    // Предполагаем, что это название кафедры/направления
-                    Cathedra cathedra = cathedraCommand.getCathedraBySecondName(messageText); // Поменял здесь
-                    if (cathedra != null) {
-                        sendMessage(chatId, "Информация о кафедре \"" + cathedra.getSecondName() + "\":\n" + cathedra.getDescription());
-                    } else {
-                        Direction direction = directionCommand.getDirectionBySecondName(messageText); // И здесь
-                        if (direction != null) {
-                            sendMessage(chatId, "Информация о направлении \"" + direction.getName() + "\":\n" + direction.getDescription());
-                        } else {
-                            sendMessage(chatId, "Неизвестная команда.");
-                        }
-                    }
-                }
+                handleSecondaryMenuCommands(chatId, text);
             }
         }
     }
 
-    private void sendMainMenu(long chatId) { // Создаем основную клавиатуру
+    private void handleMainMenuCommands(long chatId, String text) {
+        String command = commandMap.getOrDefault(text, text);
+        switch (command) {
+            case HELP_COMMAND -> helpCommand.execute(this, chatId);
+            case DOCS_COMMAND -> docsCommand.execute(this, chatId);
+            case DORMITORY_COMMAND -> dormitoryCommand.execute(this, chatId);
+            case CATHEDRA_COMMAND -> {
+                cathedraCommand.showCathedraList(this, chatId);
+                userShowMainKeyboard.put(chatId, false);
+            }
+            case DIRECTION_COMMAND -> {
+                directionCommand.showDirectionList(this, chatId);
+                userShowMainKeyboard.put(chatId, false);
+            }
+            case SUBMIT_DOCUMENTS -> {
+                usersInPoll.put(chatId, true);
+                documentRequestCommand.startPoll(this, chatId);
+            }
+            default -> sendMessage(chatId, "Неизвестная команда. Используйте /help для просмотра доступных команд.");
+        }
+    }
+
+    private void handleSecondaryMenuCommands(long chatId, String text) {
+        if (text.equals("Назад")) {
+            userShowMainKeyboard.put(chatId, true);
+            sendMainMenu(chatId);
+            return;
+        }
+
+        Cathedra cathedra = cathedraCommand.getCathedraBySecondName(text);
+        if (cathedra != null) {
+            sendMessage(chatId, "Информация о кафедре \"" + cathedra.getSecondName() + "\":\n" + cathedra.getDescription());
+            return;
+        }
+
+        Direction direction = directionCommand.getDirectionBySecondName(text);
+        if (direction != null) {
+            sendMessage(chatId, "Информация о направлении \"" + direction.getName() + "\":\n" + direction.getDescription());
+            return;
+        }
+
+        sendMessage(chatId, "Неизвестная команда. Нажмите «Назад» для возврата в меню.");
+    }
+
+    private void handleDocumentUpload(long chatId, Document document) {
+        try {
+            if (!isValidDocument(document)) {
+                sendMessage(chatId, "❌ Принимаем только PDF/JPG/PNG до 5MB");
+                return;
+            }
+
+            // Создаем Update для передачи в processDocument
+            Update dummyUpdate = createDocumentUpdate(chatId, document);
+
+            // Вызываем метод с правильными параметрами
+            documentRequestCommand.processDocument(this, dummyUpdate);
+
+            sendFileUploadKeyboard(chatId, "✅ Файл " + document.getFileName() + " принят. Отправьте следующий или нажмите «Готово»");
+
+        } catch (Exception e) {
+            sendMessage(chatId, "⚠️ Ошибка загрузки файла: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private Update createDocumentUpdate(long chatId, Document document) {
+        Update update = new Update();
+        Message message = new Message();
+
+        // Настраиваем сообщение с документом
+        message.setChat(new Chat(chatId, "private"));
+        message.setDocument(document);
+
+        update.setMessage(message);
+        return update;
+    }
+
+    private boolean isValidDocument(Document doc) {
+        String fileName = doc.getFileName().toLowerCase();
+        return fileName.matches(".*\\.(pdf|jpg|jpeg|png)$") && doc.getFileSize() <= 5_000_000;
+    }
+
+    private void handleFileUploadCommands(long chatId, String command) {
+        switch (command) {
+            case "Готово":
+                usersUploadingFiles.remove(chatId);
+                documentRequestCommand.completeSubmission(this,chatId);
+                break;
+
+            case "Отмена":
+                usersUploadingFiles.remove(chatId);
+                documentRequestCommand.cancelSubmission(this,chatId);
+                sendMainMenu(chatId);
+                break;
+
+            default:
+                sendFileUploadKeyboard(chatId, "Отправляйте документы или используйте кнопки:");
+        }
+    }
+
+    private void handleRegularCommands(long chatId, String text) {
+        if (text.equals("/start")) {
+            startCommand.execute(this, chatId);
+            userShowMainKeyboard.put(chatId, true);
+            sendMainMenu(chatId);
+            return;
+        }
+
+        if (userShowMainKeyboard.getOrDefault(chatId, true)) {
+            String command = commandMap.getOrDefault(text, text);
+            switch (command) {
+                case HELP_COMMAND -> helpCommand.execute(this, chatId);
+                case DOCS_COMMAND -> docsCommand.execute(this, chatId);
+                case DORMITORY_COMMAND -> dormitoryCommand.execute(this, chatId);
+                case CATHEDRA_COMMAND -> {
+                    cathedraCommand.showCathedraList(this, chatId);
+                    userShowMainKeyboard.put(chatId, false);
+                }
+                case DIRECTION_COMMAND -> {
+                    directionCommand.showDirectionList(this, chatId);
+                    userShowMainKeyboard.put(chatId, false);
+                }
+                case "/back" -> {
+                    userShowMainKeyboard.put(chatId, true);
+                    sendMainMenu(chatId);
+                }
+                case SUBMIT_DOCUMENTS -> {
+                    usersInPoll.put(chatId, true);
+                    documentRequestCommand.startPoll(this, chatId);
+                }
+                default -> sendMessage(chatId, "Неизвестная команда. Используйте /help");
+            }
+        } else {
+            if (text.equals("Назад")) {
+                userShowMainKeyboard.put(chatId, true);
+                sendMainMenu(chatId);
+            } else {
+                handleCathedraOrDirectionQuery(chatId, text);
+            }
+        }
+    }
+
+    private void handleCathedraOrDirectionQuery(long chatId, String query) {
+        Cathedra cathedra = cathedraCommand.getCathedraBySecondName(query);
+        if (cathedra != null) {
+            sendMessage(chatId, cathedra.getDescription());
+            return;
+        }
+
+        Direction direction = directionCommand.getDirectionBySecondName(query);
+        if (direction != null) {
+            sendMessage(chatId, direction.getDescription());
+            return;
+        }
+
+        sendMessage(chatId, "Неизвестный запрос. Используйте кнопки меню.");
+    }
+
+
+    private void sendMainMenu(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText("Выберите действие:");
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("Список команд")); // Заменили /help на "Помощь"
-        row1.add(new KeyboardButton("Документы")); // Заменили /docs на "Документы"
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton("Кафедры")); // Заменили /cathedra на "Кафедры"
-        row2.add(new KeyboardButton("Направления"));
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(new KeyboardButton("Общежитие"));
-        row3.add(new KeyboardButton("Подать документы"));// Заменили /dormitory на "Общежитие"
 
-        keyboardRows.add(row1);
-        keyboardRows.add(row2);
-        keyboardRows.add(row3);
+        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+        keyboard.setResizeKeyboard(true);
 
-        keyboardMarkup.setKeyboard(keyboardRows);
-        keyboardMarkup.setResizeKeyboard(true);
-        message.setReplyMarkup(keyboardMarkup);
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
+        List<KeyboardRow> rows = new ArrayList<>();
+        rows.add(createKeyboardRow("Список команд", "Документы"));
+        rows.add(createKeyboardRow("Кафедры", "Направления"));
+        rows.add(createKeyboardRow("Общежитие", "Подать документы"));
+
+        keyboard.setKeyboard(rows);
+        message.setReplyMarkup(keyboard);
+
+        executeMessage(message);
     }
 
-    private void sendMessage(long chatId, String text) {
+    private void sendFileUploadKeyboard(long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
+
+        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+        keyboard.setResizeKeyboard(true);
+        keyboard.setKeyboard(List.of(createKeyboardRow("Готово", "Отмена")));
+
+        message.setReplyMarkup(keyboard);
+        executeMessage(message);
+    }
+
+    private KeyboardRow createKeyboardRow(String... buttons) {
+        KeyboardRow row = new KeyboardRow();
+        for (String button : buttons) {
+            row.add(new KeyboardButton(button));
+        }
+        return row;
+    }
+
+    private void sendMessage(long chatId, String text) {
+        executeMessage(new SendMessage(String.valueOf(chatId), text));
+    }
+
+    private void executeMessage(SendMessage message) {
         try {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
+
+    public void startFileUpload(long chatId) {
+        usersUploadingFiles.put(chatId, true);
+        sendFileUploadKeyboard(chatId, "📎 Отправляйте документы по одному. Когда закончите, нажмите «Готово»");
+    }
+
     public void finishPoll(long chatId) {
-        usersInPoll.remove(chatId); // Четко сбрасываем флаг
-        sendMainMenu(chatId); // Возвращаем главное меню
+        usersInPoll.remove(chatId);
+        startFileUpload(chatId); // Переходим к загрузке файлов после опроса
     }
 }
