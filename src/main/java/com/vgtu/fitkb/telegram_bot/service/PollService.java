@@ -24,10 +24,12 @@ public class PollService {
 
     private final UserService userService;
     private final Map<Long, UserPollState> userStates = new ConcurrentHashMap<>();
+
     private static class UserPollState {
         User user = new User();
         int questionNumber = 0;
     }
+
     @Autowired
     public PollService(UserService userService) {
         this.userService = userService;
@@ -36,6 +38,7 @@ public class PollService {
     private final List<String> questions = List.of(
             "Ваше фамилия, имя, отчество?",
             "Ваша дата рождения (в формате ДД.ММ.ГГГГ)?",
+            "Введите сумму баллов за ЕГЭ за 3 предмета, с которыми поступали:",
             "Вы являетесь ребенком-сиротой или остались без попечения родителей? (Да/Нет)",
             "Вам установлена I или II группа инвалидности, либо вы являетесь ребенком-инвалидом? (Да/Нет)",
             "Вы пострадали от радиационных катастроф (Чернобыль, Семипалатинск)? (Да/Нет)",
@@ -52,10 +55,10 @@ public class PollService {
     public void processAnswer(VGUTelegramBot bot, Long chatId, String answer) throws Exception {
         UserPollState state = userStates.get(chatId);
         if (state == null) {
-            sendMessage(bot,chatId, "Опрос не начат. Введите /submit для начала.");
+            sendMessage(bot, chatId, "Опрос не начат. Введите /submit для начала.");
             return;
         }
-        // Обработка команд управления
+
         if (answer.equalsIgnoreCase("Отмена")) {
             cancelPoll(bot, chatId, state);
             return;
@@ -63,86 +66,89 @@ public class PollService {
             handleBackCommand(bot, chatId, state);
             return;
         }
-        if (state.questionNumber == 0) {
-            // Обработка ФИО
-            String[] parts = answer.split(" ");
-            if (parts.length == 3) {
-                state.user.setFirstName(parts[1]);
-                state.user.setSecondName(parts[0]);
-                state.user.setLastName(parts[2]);
-                state.questionNumber++;
-                askQuestion(bot, chatId,state);
-            } else {
-                sendMessage(bot, chatId, "Пожалуйста, введите ФИО полностью (Фамилия Имя Отчество).");
-            }
-        } else if (state.questionNumber == 1) {
-            // Обработка даты рождения
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-            try {
-                LocalDate birthday = LocalDate.parse(answer, formatter);
-                LocalDate now = LocalDate.now();
-                LocalDate minDate = LocalDate.of(1900, 1, 1);
 
-                if (birthday.isAfter(now)) {
-                    sendMessage(bot, chatId, "Дата рождения не может быть в будущем. Введите корректную дату.");
-                    return;
+        switch (state.questionNumber) {
+            case 0:
+                // Обработка ФИО
+                String[] parts = answer.split(" ");
+                if (parts.length == 3) {
+                    state.user.setFirstName(parts[1]);
+                    state.user.setSecondName(parts[0]);
+                    state.user.setLastName(parts[2]);
+                    state.questionNumber++;
+                    askQuestion(bot, chatId, state);
+                } else {
+                    sendMessage(bot, chatId, "Пожалуйста, введите ФИО полностью (Фамилия Имя Отчество).");
                 }
+                break;
 
-                if (birthday.isBefore(minDate)) {
-                    sendMessage(bot, chatId, "Дата рождения не может быть раньше 1900 года. Введите корректную дату.");
-                    return;
-                }
+            case 1:
+                // Обработка даты рождения
+                try {
+                    LocalDate birthday = LocalDate.parse(answer, DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                    LocalDate now = LocalDate.now();
+                    LocalDate minDate = LocalDate.of(1900, 1, 1);
 
-                state.user.setBirthday(birthday);
-                state.questionNumber++;
-                askQuestion(bot, chatId, state);
-            } catch (DateTimeParseException e) {
-                sendMessage(bot, chatId, "Пожалуйста, введите дату рождения в формате ДД.ММ.ГГГГ.");
-            }
-        } else if (state.questionNumber > 1 && state.questionNumber < questions.size()) {
-            // Обработка вопросов Да/Нет
-            if (answer.equalsIgnoreCase("да")) {
-                // Начисляем баллы в зависимости от вопроса
-                switch (state.questionNumber) {
-                    case 2:
-                        state.user.setPoints(state.user.getPoints() + 5);
-                        break;
-                    case 3:
-                        state.user.setPoints(state.user.getPoints() + 4);
-                        break;
-                    case 4:
-                        state.user.setPoints(state.user.getPoints() + 3);
-                        break;
-                    case 5:
-                        state.user.setPoints(state.user.getPoints() + 2);
-                        break;
-                    case 6:
-                        state.user.setPoints(state.user.getPoints() + 1);
-                        break;
-                    // Другие вопросы...
-                    default:
-                        break;
-                }
-                state.questionNumber++;
-                if(state.questionNumber < questions.size()){
-                    askQuestion(bot, chatId,state);
-                }else {
-                    finishPoll(bot,chatId,state);
-                }
+                    if (birthday.isAfter(now)) {
+                        sendMessage(bot, chatId, "Дата рождения не может быть в будущем. Введите корректную дату.");
+                        return;
+                    }
 
-            } else if (answer.equalsIgnoreCase("нет")) {
-                state.questionNumber++;
-                if(state.questionNumber < questions.size()){
-                    askQuestion(bot, chatId,state);
-                }else {
-                    finishPoll(bot,chatId,state);
+                    if (birthday.isBefore(minDate)) {
+                        sendMessage(bot, chatId, "Дата рождения не может быть раньше 1900 года. Введите корректную дату.");
+                        return;
+                    }
+
+                    state.user.setBirthday(birthday);
+                    state.questionNumber++;
+                    askQuestion(bot, chatId, state);
+                } catch (DateTimeParseException e) {
+                    sendMessage(bot, chatId, "Пожалуйста, введите дату рождения в формате ДД.ММ.ГГГГ.");
                 }
-            } else {
-                sendMessage(bot, chatId, "Пожалуйста, отвечайте только 'Да' или 'Нет'.");
-            }
+                break;
+
+            case 2:
+                // Обработка баллов ЕГЭ
+                try {
+                    int scores = Integer.parseInt(answer);
+                    if (scores < 0 || scores > 300) {
+                        sendMessage(bot, chatId, "Пожалуйста, введите корректную сумму баллов (от 0 до 300).");
+                        return;
+                    }
+                    state.user.setAvgScores(scores);
+                    state.questionNumber++;
+                    askQuestion(bot, chatId, state);
+                } catch (NumberFormatException e) {
+                    sendMessage(bot, chatId, "Пожалуйста, введите число (сумму баллов за 3 предмета).");
+                }
+                break;
+
+            default:
+                // Обработка вопросов Да/Нет (3-7)
+                if (answer.equalsIgnoreCase("да") || answer.equalsIgnoreCase("нет")) {
+                    if (answer.equalsIgnoreCase("да")) {
+                        // Начисляем баллы в зависимости от вопроса
+                        switch (state.questionNumber) {
+                            case 3: state.user.setPoints(state.user.getPoints() + 5); break;
+                            case 4: state.user.setPoints(state.user.getPoints() + 4); break;
+                            case 5: state.user.setPoints(state.user.getPoints() + 3); break;
+                            case 6: state.user.setPoints(state.user.getPoints() + 2); break;
+                            case 7: state.user.setPoints(state.user.getPoints() + 1); break;
+                        }
+                    }
+
+                    state.questionNumber++;
+                    if (state.questionNumber < questions.size()) {
+                        askQuestion(bot, chatId, state);
+                    } else {
+                        finishPoll(bot, chatId, state);
+                    }
+                } else {
+                    sendMessage(bot, chatId, "Пожалуйста, отвечайте только 'Да' или 'Нет'.");
+                }
+                break;
         }
     }
-
 
     private void askQuestion(VGUTelegramBot bot, Long chatId, UserPollState state) {
         String question = questions.get(state.questionNumber);
@@ -153,18 +159,20 @@ public class PollService {
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboardRows = new ArrayList<>();
 
-        // Добавляем кнопки для ответа
-        if (state.questionNumber > 1) { // Для вопросов Да/Нет
+        // Для вопросов Да/Нет (начиная с 3-го)
+        if (state.questionNumber >= 3) {
             KeyboardRow answerRow = new KeyboardRow();
             answerRow.add("Да");
             answerRow.add("Нет");
             keyboardRows.add(answerRow);
         }
 
-        // Добавляем кнопки управления
+        // Кнопки управления
         KeyboardRow controlRow = new KeyboardRow();
+        if (state.questionNumber > 0) {
+            controlRow.add("Назад");
+        }
         controlRow.add("Отмена");
-        controlRow.add("Назад");
         keyboardRows.add(controlRow);
 
         keyboardMarkup.setKeyboard(keyboardRows);
@@ -177,24 +185,12 @@ public class PollService {
             e.printStackTrace();
         }
     }
-    private ReplyKeyboardMarkup createYesNoKeyboard() {
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
-        KeyboardButton yesButton = new KeyboardButton("Да");
-        KeyboardButton noButton = new KeyboardButton("Нет");
-        row.add(yesButton);
-        row.add(noButton);
-        keyboardRows.add(row);
-        keyboardMarkup.setKeyboard(keyboardRows);
-        keyboardMarkup.setResizeKeyboard(true); //  уменьшить размер клавиатуры
-        return keyboardMarkup;
-    }
 
     private void finishPoll(VGUTelegramBot bot, Long chatId, UserPollState state) throws Exception {
         state.user.setChatId(chatId);
         userService.saveUser(state.user);
         userStates.remove(chatId);
+        sendMessage(bot, chatId, "Опрос завершен! Спасибо за ответы.");
         bot.finishPoll(chatId);
     }
 
@@ -212,25 +208,24 @@ public class PollService {
 
     private void handleBackCommand(VGUTelegramBot bot, Long chatId, UserPollState state) {
         if (state.questionNumber > 0) {
-            state.questionNumber--;
-
-            // Специальная обработка для возврата с вопроса Да/Нет
-            if (state.questionNumber > 1) {
-                // Откатываем начисленные баллы
-                switch (state.questionNumber + 1) { // +1 потому что мы уже уменьшили questionNumber
-                    case 2: state.user.setPoints(state.user.getPoints() - 5); break;
-                    case 3: state.user.setPoints(state.user.getPoints() - 4); break;
-                    case 4: state.user.setPoints(state.user.getPoints() - 3); break;
-                    case 5: state.user.setPoints(state.user.getPoints() - 2); break;
-                    case 6: state.user.setPoints(state.user.getPoints() - 1); break;
+            // Откатываем изменения для вопроса Да/Нет
+            if (state.questionNumber >= 3 && state.questionNumber <= 7) {
+                switch (state.questionNumber) {
+                    case 3: state.user.setPoints(state.user.getPoints() - 5); break;
+                    case 4: state.user.setPoints(state.user.getPoints() - 4); break;
+                    case 5: state.user.setPoints(state.user.getPoints() - 3); break;
+                    case 6: state.user.setPoints(state.user.getPoints() - 2); break;
+                    case 7: state.user.setPoints(state.user.getPoints() - 1); break;
                 }
             }
 
+            state.questionNumber--;
             askQuestion(bot, chatId, state);
         } else {
             sendMessage(bot, chatId, "Вы в начале опроса, нельзя вернуться назад.");
         }
     }
+
     private void cancelPoll(VGUTelegramBot bot, Long chatId, UserPollState state) {
         userStates.remove(chatId);
         sendMessage(bot, chatId, "Опрос отменён. Все введённые данные удалены.");

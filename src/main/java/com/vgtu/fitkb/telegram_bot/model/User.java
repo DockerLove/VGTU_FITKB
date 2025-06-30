@@ -30,7 +30,7 @@ public class User {
     @Column(name = "points")
     private int points;
 
-    @Column(name = "avgScores")
+    @Column(name = "avgscores")
     private int avgScores;
 
     public User() {

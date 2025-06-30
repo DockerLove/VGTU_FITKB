@@ -1,6 +1,7 @@
 package com.vgtu.fitkb.telegram_bot.service;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
@@ -10,7 +11,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,25 +22,33 @@ import java.util.List;
 public class GoogleSheetsService {
 
     private static final String SPREADSHEET_ID = "1x7Ii467_rx-CZtgbr17L4RXqvXpWpx7-ZqSmqhyTywQ"; // Из URL: https://docs.google.com/spreadsheets/d/{ID}/edit
-    private static final String RANGE = "Лист1!A2:F2"; // Диапазон для записи
+    private static final String RANGE = "Лист1!A2:G2"; // Диапазон для записи
     private static final String SHEET_NAME = "Лист1";
     private static final int ID_COLUMN_INDEX = 0;
 
     public Sheets getSheetsService() throws Exception {
-        GoogleCredential credential = GoogleCredential.fromStream(
-                        new FileInputStream("google.drive.credentials-file"))
+        // Получаем ресурс из classpath
+        InputStream in = getClass().getClassLoader().getResourceAsStream("vgtu-fitkb-df695196c0a3.json");
+
+        if (in == null) {
+            throw new FileNotFoundException("Credential file 'vgtu-fitkb-df695196c0a3.json' not found in classpath");
+        }
+
+        GoogleCredential credential = GoogleCredential.fromStream(in)
                 .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
 
         return new Sheets.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
-                GsonFactory.getDefaultInstance(),
+                JacksonFactory.getDefaultInstance(),
                 credential)
-                .setApplicationName("Google Sheets Example")
+                .setApplicationName("Your Application Name")
                 .build();
     }
 
     public void addPersonToSheet(User user) throws Exception {
         Sheets sheetsService = getSheetsService();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        String birthdayStr = user.getBirthday().format(formatter);
 
         // Подготовка данных
         List<Object> rowData = List.of(
@@ -44,7 +56,7 @@ public class GoogleSheetsService {
                 user.getFirstName(),
                 user.getSecondName(),
                 user.getLastName(),
-                user.getBirthday(),
+                birthdayStr,
                 user.getPoints(),
                 user.getAvgScores()
         );

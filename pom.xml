@@ -98,49 +98,42 @@
 			<artifactId>telegrambots</artifactId>
 			<version>6.9.7.1</version>
 		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/com.google.apis/google-api-services-drive -->
-		<dependency>
-			<groupId>com.google.apis</groupId>
-			<artifactId>google-api-services-drive</artifactId>
-			<version>v3-rev197-1.25.0</version>
-		</dependency>
-
-		<!-- Google OAuth Client -->
-		<dependency>
-			<groupId>com.google.auth</groupId>
-			<artifactId>google-auth-library-oauth2-http</artifactId>
-			<version>1.19.0</version>
-		</dependency>
-
-		<!-- Google HTTP Client -->
-		<dependency>
-			<groupId>com.google.http-client</groupId>
-			<artifactId>google-http-client-jackson2</artifactId>
-			<version>1.43.3</version>
-		</dependency>
-
 		<!-- Для работы с JSON -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>2.10.1</version>
 		</dependency>
-
+		<!-- Основной клиент Google API -->
 		<dependency>
 			<groupId>com.google.api-client</groupId>
 			<artifactId>google-api-client</artifactId>
-			<version>2.0.0</version>
+			<version>1.33.2</version>
 		</dependency>
+
+		<!-- Google Drive API -->
 		<dependency>
-			<groupId>com.google.oauth-client</groupId>
-			<artifactId>google-oauth-client-jetty</artifactId>
-			<version>1.34.1</version>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-drive</artifactId>
+			<version>v3-rev20211107-1.32.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.apis</groupId>
 			<artifactId>google-api-services-sheets</artifactId>
-			<version>v4-rev20220927-2.0.0</version>
+			<version>v4-rev20230227-2.0.0</version>
+		</dependency>
+		<!-- Google OAuth2 -->
+		<dependency>
+			<groupId>com.google.auth</groupId>
+			<artifactId>google-auth-library-oauth2-http</artifactId>
+			<version>1.19.0</version>
+		</dependency>
+
+		<!-- HTTP клиент -->
+		<dependency>
+			<groupId>com.google.http-client</groupId>
+			<artifactId>google-http-client-jackson2</artifactId>
+			<version>1.43.3</version>
 		</dependency>
 	</dependencies>
 
