@@ -20,10 +20,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -112,7 +109,11 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
 
             // Приоритетная обработка состояний
             if (usersUploadingFiles.getOrDefault(chatId, false)) {
-                handleFileUploadCommands(chatId, text);
+                try {
+                    handleFileUploadCommands(chatId, text);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
                 return;
             }
 
@@ -221,7 +222,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         return fileName.matches(".*\\.(pdf|jpg|jpeg|png)$") && doc.getFileSize() <= 5_000_000;
     }
 
-    private void handleFileUploadCommands(long chatId, String command) {
+    private void handleFileUploadCommands(long chatId, String command) throws Exception {
         // Проверяем, находится ли пользователь в режиме загрузки
         if (!usersUploadingFiles.getOrDefault(chatId, false)) {
             sendMainMenu(chatId);
@@ -242,7 +243,8 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
                 break;
 
             case "Отмена":
-                userService.deleteUserByChatId(chatId);
+                User user = userService.findByChatId(chatId);
+                userService.deleteUserByChatId(user);
                 usersUploadingFiles.put(chatId, false);
                 documentRequestCommand.cancelSubmission(this, chatId);
                 sendMainMenu(chatId);

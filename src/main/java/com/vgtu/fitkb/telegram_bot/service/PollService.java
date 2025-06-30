@@ -49,7 +49,7 @@ public class PollService {
         askQuestion(bot, chatId, state);
     }
 
-    public void processAnswer(VGUTelegramBot bot, Long chatId, String answer) {
+    public void processAnswer(VGUTelegramBot bot, Long chatId, String answer) throws Exception {
         UserPollState state = userStates.get(chatId);
         if (state == null) {
             sendMessage(bot,chatId, "Опрос не начат. Введите /submit для начала.");
@@ -191,7 +191,7 @@ public class PollService {
         return keyboardMarkup;
     }
 
-    private void finishPoll(VGUTelegramBot bot, Long chatId, UserPollState state) {
+    private void finishPoll(VGUTelegramBot bot, Long chatId, UserPollState state) throws Exception {
         state.user.setChatId(chatId);
         userService.saveUser(state.user);
         userStates.remove(chatId);

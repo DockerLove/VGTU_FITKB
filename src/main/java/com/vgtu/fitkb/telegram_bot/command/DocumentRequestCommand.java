@@ -43,7 +43,11 @@ public class DocumentRequestCommand {
      * Обрабатывает ответы пользователя во время опроса
      */
     public void processPollAnswer(VGUTelegramBot bot,long chatId, String answer) {
-        pollService.processAnswer(bot, chatId, answer);
+        try {
+            pollService.processAnswer(bot, chatId, answer);
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
     }
 
     /**

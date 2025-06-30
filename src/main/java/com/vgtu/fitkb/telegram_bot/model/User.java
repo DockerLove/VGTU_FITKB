@@ -30,11 +30,20 @@ public class User {
     @Column(name = "points")
     private int points;
 
-    @Column(name = "registration_date", nullable = false, updatable = false)
-    private LocalDateTime registrationDate = LocalDateTime.now();
+    @Column(name = "avgScores")
+    private int avgScores;
 
     public User() {
         this.points = 0;
+        this.avgScores = 0;
+    }
+
+    public int getAvgScores() {
+        return avgScores;
+    }
+
+    public void setAvgScores(int avgScores) {
+        this.avgScores = avgScores;
     }
 
     public Long getChatId() {

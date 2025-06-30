@@ -10,7 +10,7 @@ public class HelpCommand {
 
     public void execute(VGUTelegramBot bot, long chatId) {
         String helpMessage = "Список доступных команд:\n" +
-                "/star - Начать общение с ботом\n" +
+                "/start - Начать общение с ботом\n" +
                 "/help - Показать это сообщение\n" +
                 "/cathedra - Получить список и информацию по каждой кафедре ФИТКБ\n" +
                 "/direction - Получить список и информацию по каждому направлению ФИТКБ\n" +

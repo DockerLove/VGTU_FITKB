@@ -49,8 +49,8 @@ public class SubmitService {
 
         try {
             sendMessage(bot,chatId,"Пожалуйста подождите, документы отправляются.");
-            Optional<User> user = userService.findByChatId(chatId);
-            String folderId = driveService.createFolder(user.get().getSecondName() + " " + user.get().getFirstName()+ " " + user.get().getLastName() + " "+ chatId.toString());
+            User user = userService.findByChatId(chatId);
+            String folderId = driveService.createFolder(user.getSecondName() + " " + user.getFirstName()+ " " + user.getLastName() + " "+ user.getBirthday());
             for (String file : files) {
                 String[] parts = file.split(":");
                 driveService.uploadTelegramFile(bot, parts[1], parts[0], folderId);

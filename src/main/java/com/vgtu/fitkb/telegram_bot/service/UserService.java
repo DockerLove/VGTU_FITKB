@@ -2,6 +2,7 @@ package com.vgtu.fitkb.telegram_bot.service;
 import com.vgtu.fitkb.telegram_bot.bot.VGUTelegramBot;
 import com.vgtu.fitkb.telegram_bot.model.User;
 import com.vgtu.fitkb.telegram_bot.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -13,27 +14,29 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    private final GoogleSheetsService googleSheetsService;
     private final UserRepository userRepository;
-
-    public UserService(UserRepository userRepository) {
+    @Autowired
+    public UserService(GoogleSheetsService googleSheetsService,UserRepository userRepository) {
+        this.googleSheetsService = googleSheetsService;
         this.userRepository = userRepository;
     }
 
     @Transactional
-    public User saveUser(User user) {
-        return userRepository.save(user);
+    public void saveUser(User user) {
+        try {
+            User user1 = userRepository.save(user);
+            googleSheetsService.addPersonToSheet(user1);
+        }catch(Exception ex){
+            ex.printStackTrace();
+        }
     }
 
+
     @Transactional
-    public void updateUserPoints(Long userId, Integer additionalPoints) {
-        userRepository.findById(userId).ifPresent(user -> {
-            user.setPoints(user.getPoints() + additionalPoints);
-            userRepository.save(user);
-        });
-    }
-    @Transactional
-    public void deleteUserByChatId(long chatId) {
-        userRepository.deleteByChatId(chatId);
+    public void deleteUserByChatId(User user) throws Exception {
+        userRepository.deleteByChatId(user.getChatId());
+        googleSheetsService.deleteRowByUserId(user.getId().toString());
     }
 
     public void showRating(VGUTelegramBot bot, long chatId) {
@@ -77,7 +80,9 @@ public class UserService {
         }
     }
 
-    public Optional<User> findByChatId(Long chatId){
+    public User findByChatId(Long chatId){
         return userRepository.findByChatId(chatId);
     }
+
+
 }
