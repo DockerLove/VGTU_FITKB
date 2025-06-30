@@ -22,7 +22,7 @@ import java.util.List;
 public class GoogleSheetsService {
 
     private static final String SPREADSHEET_ID = "1x7Ii467_rx-CZtgbr17L4RXqvXpWpx7-ZqSmqhyTywQ"; // Из URL: https://docs.google.com/spreadsheets/d/{ID}/edit
-    private static final String RANGE = "Лист1!A2:G2"; // Диапазон для записи
+    private static final String RANGE = "Лист1!A1:G1"; // Диапазон для записи
     private static final String SHEET_NAME = "Лист1";
     private static final int ID_COLUMN_INDEX = 0;
 
