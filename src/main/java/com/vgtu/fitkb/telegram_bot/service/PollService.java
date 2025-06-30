@@ -43,7 +43,12 @@ public class PollService {
             "Вам установлена I или II группа инвалидности, либо вы являетесь ребенком-инвалидом? (Да/Нет)",
             "Вы пострадали от радиационных катастроф (Чернобыль, Семипалатинск)? (Да/Нет)",
             "Вы являетесь ветераном боевых действий или инвалидом вследствие военной травмы? (Да/Нет)",
-            "Вы проходили длительную военную службу по контракту? (Да/Нет)"
+            "Вы проходили длительную военную службу по контракту? (Да/Нет)",
+            "Вы студент из многодетной семьи (3 и более детей)? (Да/Нет)",
+            "Студенты, воспитывающиеся в неполных семьях (один родитель)? (Да/Нет)",
+            "Студенты, прибывшие из отдаленных или труднодоступных регионов (Крайний Север, Дальний Восток, сельские территории с низкой инфраструктурой)? (Да/Нет)",
+            "Студенты, чьи родители являются инвалидами I или II группы? (Да/Нет)",
+            "Студенты — родители, воспитывающие ребенка в одиночку? (Да/Нет)"
     );
 
     public void startPoll(VGUTelegramBot bot, Long chatId) {
@@ -69,7 +74,7 @@ public class PollService {
 
         switch (state.questionNumber) {
             case 0:
-                // Обработка ФИО
+                // Обработка ФИО (без изменений)
                 String[] parts = answer.split(" ");
                 if (parts.length == 3) {
                     state.user.setFirstName(parts[1]);
@@ -83,7 +88,7 @@ public class PollService {
                 break;
 
             case 1:
-                // Обработка даты рождения
+                // Обработка даты рождения (без изменений)
                 try {
                     LocalDate birthday = LocalDate.parse(answer, DateTimeFormatter.ofPattern("dd.MM.yyyy"));
                     LocalDate now = LocalDate.now();
@@ -108,7 +113,7 @@ public class PollService {
                 break;
 
             case 2:
-                // Обработка баллов ЕГЭ
+                // Обработка баллов ЕГЭ (без изменений)
                 try {
                     int scores = Integer.parseInt(answer);
                     if (scores < 0 || scores > 300) {
@@ -124,16 +129,13 @@ public class PollService {
                 break;
 
             default:
-                // Обработка вопросов Да/Нет (3-7)
                 if (answer.equalsIgnoreCase("да") || answer.equalsIgnoreCase("нет")) {
                     if (answer.equalsIgnoreCase("да")) {
-                        // Начисляем баллы в зависимости от вопроса
-                        switch (state.questionNumber) {
-                            case 3: state.user.setPoints(state.user.getPoints() + 5); break;
-                            case 4: state.user.setPoints(state.user.getPoints() + 4); break;
-                            case 5: state.user.setPoints(state.user.getPoints() + 3); break;
-                            case 6: state.user.setPoints(state.user.getPoints() + 2); break;
-                            case 7: state.user.setPoints(state.user.getPoints() + 1); break;
+                        // Начисление баллов в зависимости от номера вопроса
+                        if (state.questionNumber >= 3 && state.questionNumber <= 7) {
+                            state.user.setPoints(state.user.getPoints() + 2); // +2 балла за вопросы 3-7
+                        } else if (state.questionNumber >= 8 && state.questionNumber <= 12) {
+                            state.user.setPoints(state.user.getPoints() + 1); // +1 балл за вопросы 8-12
                         }
                     }
 
@@ -147,6 +149,24 @@ public class PollService {
                     sendMessage(bot, chatId, "Пожалуйста, отвечайте только 'Да' или 'Нет'.");
                 }
                 break;
+        }
+    }
+
+    // ... (остальные методы остаются без изменений до handleBackCommand)
+
+    private void handleBackCommand(VGUTelegramBot bot, Long chatId, UserPollState state) {
+        if (state.questionNumber > 0) {
+            // Откат баллов при возврате
+            if (state.questionNumber >= 3 && state.questionNumber <= 7) {
+                state.user.setPoints(state.user.getPoints() - 2); // -2 балла за вопросы 3-7
+            } else if (state.questionNumber >= 8 && state.questionNumber <= 12) {
+                state.user.setPoints(state.user.getPoints() - 1); // -1 балл за вопросы 8-12
+            }
+
+            state.questionNumber--;
+            askQuestion(bot, chatId, state);
+        } else {
+            sendMessage(bot, chatId, "Вы в начале опроса, нельзя вернуться назад.");
         }
     }
 
@@ -203,26 +223,6 @@ public class PollService {
             bot.execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
-        }
-    }
-
-    private void handleBackCommand(VGUTelegramBot bot, Long chatId, UserPollState state) {
-        if (state.questionNumber > 0) {
-            // Откатываем изменения для вопроса Да/Нет
-            if (state.questionNumber >= 3 && state.questionNumber <= 7) {
-                switch (state.questionNumber) {
-                    case 3: state.user.setPoints(state.user.getPoints() - 5); break;
-                    case 4: state.user.setPoints(state.user.getPoints() - 4); break;
-                    case 5: state.user.setPoints(state.user.getPoints() - 3); break;
-                    case 6: state.user.setPoints(state.user.getPoints() - 2); break;
-                    case 7: state.user.setPoints(state.user.getPoints() - 1); break;
-                }
-            }
-
-            state.questionNumber--;
-            askQuestion(bot, chatId, state);
-        } else {
-            sendMessage(bot, chatId, "Вы в начале опроса, нельзя вернуться назад.");
         }
     }
 
