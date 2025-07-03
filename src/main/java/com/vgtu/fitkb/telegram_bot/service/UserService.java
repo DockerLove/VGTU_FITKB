@@ -25,8 +25,8 @@ public class UserService {
     @Transactional
     public void saveUser(User user) {
         try {
-            User user1 = userRepository.save(user);
-            googleSheetsService.addPersonToSheet(user1);
+            userRepository.save(user);
+            googleSheetsService.addPersonToSheet(user);
         }catch(Exception ex){
             ex.printStackTrace();
         }
@@ -35,8 +35,9 @@ public class UserService {
 
     @Transactional
     public void deleteUserByChatId(User user) throws Exception {
-        userRepository.deleteByChatId(user.getChatId());
         googleSheetsService.deleteRowByUserId(user.getId().toString());
+        userRepository.deleteByChatId(user.getChatId());
+
     }
 
     public void showRating(VGUTelegramBot bot, long chatId) {
