@@ -15,9 +15,11 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Service
 public class PollService {
@@ -39,10 +41,28 @@ public class PollService {
             "Ваше фамилия, имя, отчество?",
             "Ваша дата рождения (в формате ДД.ММ.ГГГГ)?",
             "Введите сумму баллов за ЕГЭ за 3 предмета, с которыми поступали:",
-            "Вы являетесь ребенком-сиротой или остались без попечения родителей? (Да/Нет)",
-            "Вам установлена I или II группа инвалидности, либо вы являетесь ребенком-инвалидом? (Да/Нет)",
-            "Вы пострадали от радиационных катастроф (Чернобыль, Семипалатинск)? (Да/Нет)",
-            "Вы являетесь ветераном боевых действий или инвалидом вследствие военной травмы? (Да/Нет)",
+
+            "Есть ли у вас какие либо льготы?(Да/Нет)",
+
+            "1.Являющимся детьми-сиротами и детьми, оставшимися без попечения " +
+                    "родителей, лицами из числа детей-сирот и детей, оставшихся без " +
+                    "попечения родителей, лицами, потерявшими в период обучения обоих " +
+                    "родителей или единственного родителя? (Да/Нет)",
+            "2.Являющимися детьми-инвалидами, инвалидами I и II групп, " +
+                    "инвалидами с детства? (Да/Нет)",
+            "3.Подвергшимся воздействию радиации вследствие катастрофы на " +
+                    "Чернобыльской АЭС и иных радиационных катастроф, вследствие " +
+                    "ядерных испытаний на Семипалатинском полигоне? (Да/Нет)",
+            "4.Являющимся инвалидами вследствие военной травмы или заболевания, " +
+                    "полученных в период прохождения военной службы, и ветеранами " +
+                    "боевых действии, а также студентам из числа граждан, проходивших в " +
+                    "течение не менее трех лет военную службу по контракту на воинских " +
+                    "должностях, подлежащих замещению солдатами, матросами, " +
+                    "сержантами, старшинами, и уволенных с военной службы по " +
+                    "основаниям, предусмотренным подпунктами «б» - «г» пункта 1, " +
+                    "подпунктом «а» пункта 2 и подпунктами «а» - «в» пункта 3 статьи 51 " +
+                    "Федерального закона «О воинской обязанности и военной службе»? (Да/Нет)",
+
             "Вы проходили длительную военную службу по контракту? (Да/Нет)",
             "Вы студент из многодетной семьи (3 и более детей)? (Да/Нет)",
             "Студенты, воспитывающиеся в неполных семьях (один родитель)? (Да/Нет)",
@@ -73,22 +93,36 @@ public class PollService {
         }
 
         switch (state.questionNumber) {
-            case 0:
-                // Обработка ФИО (без изменений)
+            case 0: // Обработка ФИО (без изменений)
                 String[] parts = answer.split(" ");
-                if (parts.length == 3) {
-                    state.user.setFirstName(parts[1]);
-                    state.user.setSecondName(parts[0]);
-                    state.user.setLastName(parts[2]);
-                    state.questionNumber++;
-                    askQuestion(bot, chatId, state);
+                if (parts.length >= 2) {
+                    boolean isValid = true;
+                    for (String part : parts) {
+                        if (!Pattern.matches("^[\\p{L}-'.]+$", part)) {
+                            isValid = false;
+                            break;
+                        }
+                    }
+
+                    if (isValid) {
+                        state.user.setSecondName(parts[0]);
+                        state.user.setFirstName(parts[1]);
+                        if (parts.length == 3) {
+                            state.user.setLastName(parts[2]);
+                        } else if (parts.length > 3) {
+                            state.user.setLastName(String.join(" ", Arrays.copyOfRange(parts, 2, parts.length)));
+                        }
+                        state.questionNumber++;
+                        askQuestion(bot, chatId, state);
+                    } else {
+                        sendMessage(bot, chatId, "Пожалуйста, введите ФИО, используя только буквы и допустимые символы (-, ', .). Цифры не допускаются.");
+                    }
                 } else {
-                    sendMessage(bot, chatId, "Пожалуйста, введите ФИО полностью (Фамилия Имя Отчество).");
+                    sendMessage(bot, chatId, "Пожалуйста, введите ФИО правильно (Фамилия Имя Отчество(если есть)).");
                 }
                 break;
 
-            case 1:
-                // Обработка даты рождения (без изменений)
+            case 1: // Дата рождения (без изменений)
                 try {
                     LocalDate birthday = LocalDate.parse(answer, DateTimeFormatter.ofPattern("dd.MM.yyyy"));
                     LocalDate now = LocalDate.now();
@@ -112,12 +146,11 @@ public class PollService {
                 }
                 break;
 
-            case 2:
-                // Обработка баллов ЕГЭ (без изменений)
+            case 2: // Баллы ЕГЭ (без изменений)
                 try {
                     int scores = Integer.parseInt(answer);
-                    if (scores < 0 || scores > 300) {
-                        sendMessage(bot, chatId, "Пожалуйста, введите корректную сумму баллов (от 0 до 300).");
+                    if (scores < 0 || scores > 315) {
+                        sendMessage(bot, chatId, "Пожалуйста, введите корректную сумму баллов (от 0 до 315).");
                         return;
                     }
                     state.user.setAvgScores(scores);
@@ -128,15 +161,65 @@ public class PollService {
                 }
                 break;
 
-            default:
+            case 3: // Вопрос о наличии льгот
+                if (answer.equalsIgnoreCase("нет")) {
+                    finishPoll(bot, chatId, state); // Завершаем опрос если нет льгот
+                } else if (answer.equalsIgnoreCase("да")) {
+                    // Создаем сообщение с клавиатурой выбора льгот
+                    SendMessage message = new SendMessage();
+                    message.setChatId(chatId.toString());
+                    message.setText("Выберите номер вашей льготы:");
+
+                    // Настройка клавиатуры с выбором льгот 1-4
+                    ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+                    keyboard.setResizeKeyboard(true);
+                    keyboard.setOneTimeKeyboard(true);
+
+                    List<KeyboardRow> keyboardRows = new ArrayList<>();
+                    KeyboardRow row = new KeyboardRow();
+                    row.add("1");
+                    row.add("2");
+                    row.add("3");
+                    row.add("4");
+                    keyboardRows.add(row);
+
+                    // Добавляем кнопки управления
+                    KeyboardRow controlRow = new KeyboardRow();
+                    controlRow.add("Назад");
+                    controlRow.add("Отмена");
+                    keyboardRows.add(controlRow);
+
+                    keyboard.setKeyboard(keyboardRows);
+                    message.setReplyMarkup(keyboard);
+
+                    try {
+                        bot.execute(message); // Отправляем сообщение с клавиатурой
+                        state.questionNumber++; // Переходим к обработке выбора льготы
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        sendMessage(bot, chatId, "Произошла ошибка при отправке сообщения");
+                    }
+                } else {
+                    sendMessage(bot, chatId, "Пожалуйста, ответьте 'Да' или 'Нет'.");
+                }
+                break;
+
+            case 4: // Обработка выбора льготы (1-4)
+                if (answer.matches("[1-4]")) {
+                    // Сохраняем тип льготы (если нужно)
+                    // Пропускаем вопросы 5-8 (индексы 4-7), переходим сразу к вопросу 9 (индекс 8)
+                    state.questionNumber = 8;
+                    askQuestion(bot, chatId, state);
+                } else {
+                    sendMessage(bot, chatId, "Пожалуйста, выберите номер льготы от 1 до 4.");
+                }
+                break;
+
+            default: // Обработка вопросов 9-13
                 if (answer.equalsIgnoreCase("да") || answer.equalsIgnoreCase("нет")) {
                     if (answer.equalsIgnoreCase("да")) {
-                        // Начисление баллов в зависимости от номера вопроса
-                        if (state.questionNumber >= 3 && state.questionNumber <= 7) {
-                            state.user.setPoints(state.user.getPoints() + 2); // +2 балла за вопросы 3-7
-                        } else if (state.questionNumber >= 8 && state.questionNumber <= 12) {
-                            state.user.setPoints(state.user.getPoints() + 1); // +1 балл за вопросы 8-12
-                        }
+                        // Начисляем баллы за дополнительные льготы
+                        state.user.setPoints(state.user.getPoints() + 1);
                     }
 
                     state.questionNumber++;
@@ -152,57 +235,118 @@ public class PollService {
         }
     }
 
-    // ... (остальные методы остаются без изменений до handleBackCommand)
-
-    private void handleBackCommand(VGUTelegramBot bot, Long chatId, UserPollState state) {
-        if (state.questionNumber > 0) {
-            // Откат баллов при возврате
-            if (state.questionNumber >= 3 && state.questionNumber <= 7) {
-                state.user.setPoints(state.user.getPoints() - 2); // -2 балла за вопросы 3-7
-            } else if (state.questionNumber >= 8 && state.questionNumber <= 12) {
-                state.user.setPoints(state.user.getPoints() - 1); // -1 балл за вопросы 8-12
-            }
-
-            state.questionNumber--;
-            askQuestion(bot, chatId, state);
-        } else {
-            sendMessage(bot, chatId, "Вы в начале опроса, нельзя вернуться назад.");
-        }
-    }
-
+    // Метод askQuestion с учетом новой логики
     private void askQuestion(VGUTelegramBot bot, Long chatId, UserPollState state) {
         String question = questions.get(state.questionNumber);
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(question);
 
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        // Для вопроса о льготах (индекс 3) используем стандартную клавиатуру Да/Нет
+        if (state.questionNumber == 3) {
+            ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+            List<KeyboardRow> keyboardRows = new ArrayList<>();
 
-        // Для вопросов Да/Нет (начиная с 3-го)
-        if (state.questionNumber >= 3) {
             KeyboardRow answerRow = new KeyboardRow();
             answerRow.add("Да");
             answerRow.add("Нет");
             keyboardRows.add(answerRow);
-        }
 
-        // Кнопки управления
-        KeyboardRow controlRow = new KeyboardRow();
-        if (state.questionNumber > 0) {
-            controlRow.add("Назад");
-        }
-        controlRow.add("Отмена");
-        keyboardRows.add(controlRow);
+            KeyboardRow controlRow = new KeyboardRow();
+            if (state.questionNumber > 0) controlRow.add("Назад");
+            controlRow.add("Отмена");
+            keyboardRows.add(controlRow);
 
-        keyboardMarkup.setKeyboard(keyboardRows);
-        keyboardMarkup.setResizeKeyboard(true);
-        message.setReplyMarkup(keyboardMarkup);
+            keyboardMarkup.setKeyboard(keyboardRows);
+            keyboardMarkup.setResizeKeyboard(true);
+            message.setReplyMarkup(keyboardMarkup);
+        }
+        // Для остальных вопросов (кроме выбора льготы) используем стандартную клавиатуру
+        else if (state.questionNumber != 4) {
+            ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+            List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+            if (state.questionNumber >= 3) { // Для вопросов Да/Нет
+                KeyboardRow answerRow = new KeyboardRow();
+                answerRow.add("Да");
+                answerRow.add("Нет");
+                keyboardRows.add(answerRow);
+            }
+
+            KeyboardRow controlRow = new KeyboardRow();
+            if (state.questionNumber > 0) controlRow.add("Назад");
+            controlRow.add("Отмена");
+            keyboardRows.add(controlRow);
+
+            keyboardMarkup.setKeyboard(keyboardRows);
+            keyboardMarkup.setResizeKeyboard(true);
+            message.setReplyMarkup(keyboardMarkup);
+        }
 
         try {
             bot.execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void handleBackCommand(VGUTelegramBot bot, Long chatId, UserPollState state) {
+        if (state.questionNumber > 0) {
+            // Откат баллов при возврате
+            if (state.questionNumber >= 8 && state.questionNumber <= 12) { // Вопросы 9-13
+                // Убираем 1 балл, если был ответ "Да" на предыдущий вопрос
+                if (state.user.getPoints() > 0) {
+                    state.user.setPoints(state.user.getPoints() - 1);
+                }
+            }
+
+            // Особый случай - возврат с выбора льготы (вопрос 5)
+            if (state.questionNumber == 4) {
+                // Сбрасываем выбор льготы
+                // Возвращаемся к вопросу о наличии льгот (вопрос 4)
+                state.questionNumber = 3;
+            } else {
+                // Стандартный возврат на предыдущий вопрос
+                state.questionNumber--;
+            }
+
+            // Для возврата к выбору льгот создаем сообщение с клавиатурой
+            if (state.questionNumber == 3) {
+                SendMessage message = new SendMessage();
+                message.setChatId(chatId.toString());
+                message.setText("Выберите номер вашей льготы:");
+
+                ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+                keyboard.setResizeKeyboard(true);
+                keyboard.setOneTimeKeyboard(true);
+
+                List<KeyboardRow> rows = new ArrayList<>();
+                KeyboardRow row = new KeyboardRow();
+                row.add("1");
+                row.add("2");
+                row.add("3");
+                row.add("4");
+                rows.add(row);
+
+                // Добавляем кнопки управления
+                KeyboardRow controlRow = new KeyboardRow();
+                controlRow.add("Назад");
+                controlRow.add("Отмена");
+                rows.add(controlRow);
+
+                keyboard.setKeyboard(rows);
+                message.setReplyMarkup(keyboard);
+
+                try {
+                    bot.execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                askQuestion(bot, chatId, state);
+            }
+        } else {
+            sendMessage(bot, chatId, "Вы в начале опроса, нельзя вернуться назад.");
         }
     }
 
