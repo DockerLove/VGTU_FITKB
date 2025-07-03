@@ -64,8 +64,12 @@ public class DocumentRequestCommand {
     /**
      * Завершает процесс подачи документов
      */
-    public boolean completeSubmission(VGUTelegramBot bot,long chatId) {
-        return submitService.completeSubmission(bot, chatId);
+    public boolean completeSubmission(VGUTelegramBot bot,long chatId) throws Exception {
+        try {
+            return submitService.completeSubmission(bot, chatId);
+        }catch (Exception ex){
+            throw new Exception();
+        }
     }
 
     /**

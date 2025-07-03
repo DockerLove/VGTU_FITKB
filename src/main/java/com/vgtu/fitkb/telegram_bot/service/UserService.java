@@ -54,9 +54,9 @@ public class UserService {
             ratingMessage.append(String.format(
                     "%d. %s %s %s (%s)\n",
                     position++,
-                    user.getLastName(),
-                    user.getFirstName(),
                     user.getSecondName() != null ? user.getSecondName() : "",
+                    user.getFirstName(),
+                    user.getLastName(),
                     user.getBirthday() != null ? user.getBirthday().toString() : "дата не указана"
             ));
         }

@@ -3,12 +3,14 @@ package com.vgtu.fitkb.telegram_bot.service;
 import com.vgtu.fitkb.telegram_bot.bot.VGUTelegramBot;
 import com.vgtu.fitkb.telegram_bot.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +43,7 @@ public class SubmitService {
         }
     }
 
-    public boolean completeSubmission(VGUTelegramBot bot, Long chatId) {
+    public boolean completeSubmission(VGUTelegramBot bot, Long chatId) throws Exception {
         List<String> files = userFiles.get(chatId);
         if (files == null || files.isEmpty()) {
             return false; // Не удаляем usersUploadingFiles здесь!
@@ -58,8 +60,7 @@ public class SubmitService {
             sendMessage(bot, chatId, "✅ Документы успешно загружены!");
             return true;
         } catch (Exception e) {
-            sendMessage(bot, chatId, "❌ Ошибка: " + e.getMessage());
-            return false;
+            throw new Exception();
         } finally {
             userFiles.remove(chatId);
         }

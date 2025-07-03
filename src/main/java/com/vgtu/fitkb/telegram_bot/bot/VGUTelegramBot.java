@@ -222,7 +222,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
         return fileName.matches(".*\\.(pdf|jpg|jpeg|png)$") && doc.getFileSize() <= 5_000_000;
     }
 
-    private void handleFileUploadCommands(long chatId, String command) throws Exception {
+    private void handleFileUploadCommands(long chatId, String command){
         // Проверяем, находится ли пользователь в режиме загрузки
         if (!usersUploadingFiles.getOrDefault(chatId, false)) {
             sendMainMenu(chatId);
@@ -231,23 +231,34 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
 
         switch (command) {
             case "Готово":
-                boolean success = documentRequestCommand.completeSubmission(this, chatId);
-                if (success) {
-                    usersUploadingFiles.put(chatId, false); // Выходим из режима загрузки
+                try {
+                    boolean success = documentRequestCommand.completeSubmission(this, chatId);
+
+                    if (success) {
+                        usersUploadingFiles.put(chatId, false); // Выходим из режима загрузки
+                        sendMainMenu(chatId);
+                    } else {
+                        // Остаемся в режиме загрузки, но просим отправить файлы
+                        sendFileUploadKeyboard(chatId,
+                                "Вы не отправили ни одного файла. Пожалуйста, отправьте документы или нажмите «Отмена»");
+                    }
+                }catch (Exception e){
+                    usersUploadingFiles.put(chatId, false);
+                    sendMessage(chatId,"Ошибка: C одного аккаунта максимум 1 заявление");
                     sendMainMenu(chatId);
-                } else {
-                    // Остаемся в режиме загрузки, но просим отправить файлы
-                    sendFileUploadKeyboard(chatId,
-                            "Вы не отправили ни одного файла. Пожалуйста, отправьте документы или нажмите «Отмена»");
                 }
                 break;
 
             case "Отмена":
-                User user = userService.findByChatId(chatId);
-                userService.deleteUserByChatId(user);
-                usersUploadingFiles.put(chatId, false);
-                documentRequestCommand.cancelSubmission(this, chatId);
-                sendMainMenu(chatId);
+                try {
+                    User user = userService.findByChatId(chatId);
+                    userService.deleteUserByChatId(user);
+                    usersUploadingFiles.put(chatId, false);
+                    documentRequestCommand.cancelSubmission(this, chatId);
+                    sendMainMenu(chatId);
+                }catch (Exception e){
+                    sendMainMenu(chatId);
+                }
                 break;
 
             default:
@@ -315,7 +326,7 @@ public class VGUTelegramBot extends TelegramLongPollingBot {
     }
 
 
-    private void sendMainMenu(long chatId) {
+    public void sendMainMenu(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText("Выберите действие:");
